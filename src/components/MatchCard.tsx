@@ -8,6 +8,7 @@ export interface MatchCardProps {
   match: Match;
   teams: Team[];
   playerNamesByTeam: Record<string, string[]>;
+  readOnly?: boolean;
   onSubmit: (matchId: string, scoreHome: number, scoreAway: number, status: MatchStatus, scorers: Scorer[]) => void;
   onDelete: (matchId: string) => void;
 }
@@ -16,6 +17,7 @@ export default function MatchCard({
   match,
   teams,
   playerNamesByTeam,
+  readOnly = false,
   onSubmit,
   onDelete,
 }: MatchCardProps) {
@@ -238,7 +240,7 @@ export default function MatchCard({
       )}
 
       {/* Action buttons */}
-      {!isEditing && (
+      {!isEditing && !readOnly && (
         <div className="flex border-t border-gray-100">
           <button
             type="button"

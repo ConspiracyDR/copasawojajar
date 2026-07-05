@@ -8,6 +8,7 @@ interface JadwalProps {
   matches: Match[];
   teams: Team[];
   playerNamesByTeam: Record<string, string[]>;
+  readOnly?: boolean;
   onSubmit: (matchId: string, scoreHome: number, scoreAway: number, status: MatchStatus, scorers: Scorer[]) => void;
   onDelete: (matchId: string) => void;
 }
@@ -16,6 +17,7 @@ export default function Jadwal({
   matches,
   teams,
   playerNamesByTeam,
+  readOnly = false,
   onSubmit,
   onDelete,
 }: JadwalProps) {
@@ -59,6 +61,7 @@ export default function Jadwal({
             match={match}
             teams={teams}
             playerNamesByTeam={playerNamesByTeam}
+            readOnly={readOnly}
             onSubmit={onSubmit}
             onDelete={onDelete}
           />

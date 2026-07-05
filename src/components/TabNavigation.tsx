@@ -5,6 +5,7 @@ import { TabId } from '@/types/tournament';
 interface TabNavigationProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  isAdmin?: boolean;
 }
 
 const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
@@ -66,14 +67,20 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+export default function TabNavigation({
+  activeTab,
+  onTabChange,
+  isAdmin = true,
+}: TabNavigationProps) {
+  const visibleTabs = tabs.filter((tab) => isAdmin || !['input', 'admin'].includes(tab.id));
+
   return (
     <nav
       role="tablist"
       aria-label="Navigasi utama"
       className="fixed bottom-0 left-0 right-0 z-50 flex flex-row border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:static md:border-t-0 md:border-b md:border-gray-200 md:shadow-none"
     >
-      {tabs.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button

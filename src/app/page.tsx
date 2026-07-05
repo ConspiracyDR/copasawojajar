@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, FormEvent } from 'react';
 import { TabId, MatchFormData, MatchStatus, Scorer } from '@/types/tournament';
 import { useTournament } from '@/hooks/useTournament';
 import TabNavigation from '@/components/TabNavigation';
@@ -15,6 +15,11 @@ import DataManagement from '@/components/DataManagement';
 import AdminPanel from '@/components/AdminPanel';
 
 export default function Home() {
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  const [pendingPin, setPendingPin] = useState('');
+
   const {
     teams,
     matches,
@@ -35,7 +40,7 @@ export default function Home() {
     removePlayer,
     updateMatchDate,
     isLoaded,
-  } = useTournament();
+  } = useTournament({ isAdmin, adminPin });
 
   const [activeTab, setActiveTab] = useState<TabId>('klasemen');
   const [deleteMatchId, setDeleteMatchId] = useState<string | null>(null);
@@ -43,6 +48,44 @@ export default function Home() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldShowAdminLogin = params.get('admin') === '1';
+    const savedPin = window.sessionStorage.getItem('copa-admin-pin') ?? '';
+
+    setShowAdminLogin(shouldShowAdminLogin);
+    if (savedPin) {
+      setIsAdmin(true);
+      setAdminPin(savedPin);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin && (activeTab === 'input' || activeTab === 'admin')) {
+      setActiveTab('klasemen');
+    }
+  }, [activeTab, isAdmin]);
+
+  function handleAdminLogin(e: FormEvent) {
+    e.preventDefault();
+    const pin = pendingPin.trim();
+    if (!pin) return;
+
+    window.sessionStorage.setItem('copa-admin-pin', pin);
+    setAdminPin(pin);
+    setIsAdmin(true);
+    setPendingPin('');
+    setToast({ message: 'Mode admin aktif', type: 'success' });
+  }
+
+  function handleAdminLogout() {
+    window.sessionStorage.removeItem('copa-admin-pin');
+    setIsAdmin(false);
+    setAdminPin('');
+    setActiveTab('klasemen');
+    setToast({ message: 'Mode view-only aktif', type: 'success' });
+  }
 
   // Direct submit from Jadwal MatchCard inline form
   const handleJadwalSubmit = useCallback(
@@ -186,9 +229,41 @@ export default function Home() {
         <div className="max-w-4xl mx-auto p-4">
           <h1 className="text-2xl font-bold text-center mb-4">Copa Sawo Jajar</h1>
 
+          <div className="mb-4 flex items-center justify-center">
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={handleAdminLogout}
+                className="min-h-[40px] rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Keluar Admin
+              </button>
+            ) : showAdminLogin ? (
+              <form onSubmit={handleAdminLogin} className="flex w-full max-w-sm gap-2">
+                <input
+                  type="password"
+                  value={pendingPin}
+                  onChange={(e) => setPendingPin(e.target.value)}
+                  placeholder="PIN admin"
+                  className="min-w-0 flex-1 rounded border border-gray-300 p-2 text-[16px]"
+                />
+                <button
+                  type="submit"
+                  className="min-h-[44px] rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Masuk
+                </button>
+              </form>
+            ) : (
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                View-only
+              </span>
+            )}
+          </div>
+
           {/* Desktop tab navigation (top) */}
           <div className="hidden md:block mb-4">
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
           </div>
 
           {/* Tab content */}
@@ -217,6 +292,7 @@ export default function Home() {
                 matches={displayMatches}
                 teams={teams}
                 playerNamesByTeam={playerNamesByTeam}
+                readOnly={!isAdmin}
                 onSubmit={handleJadwalSubmit}
                 onDelete={handleDeleteRequest}
               />
@@ -229,7 +305,7 @@ export default function Home() {
             aria-labelledby="tab-input"
             hidden={activeTab !== 'input'}
           >
-            {activeTab === 'input' && (
+            {isAdmin && activeTab === 'input' && (
               <PlayerManagement
                 teams={teams}
                 playerNamesByTeam={playerNamesByTeam}
@@ -257,7 +333,7 @@ export default function Home() {
             aria-labelledby="tab-admin"
             hidden={activeTab !== 'admin'}
           >
-            {activeTab === 'admin' && (
+            {isAdmin && activeTab === 'admin' && (
               <AdminPanel
                 teams={teams}
                 matches={displayMatches}
@@ -270,17 +346,18 @@ export default function Home() {
             )}
           </div>
 
-          {/* Data Management Section */}
-          <DataManagement
-            onExport={handleExport}
-            onImport={handleImportRequest}
-            onReset={handleResetRequest}
-          />
+          {isAdmin && (
+            <DataManagement
+              onExport={handleExport}
+              onImport={handleImportRequest}
+              onReset={handleResetRequest}
+            />
+          )}
         </div>
 
         {/* Mobile tab navigation (bottom) */}
         <div className="md:hidden">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
         </div>
       </main>
     </>

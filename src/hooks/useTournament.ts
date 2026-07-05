@@ -14,6 +14,7 @@ import {
 } from '@/types/tournament';
 import { PLAYER_NAMES_BY_TEAM, TEAMS, generateMatchSlots } from '@/data/teams';
 import { StorageUtil } from '@/utils/storage';
+import { RemoteStorage } from '@/utils/remoteStorage';
 import { calculateStandings } from '@/utils/calculations';
 import { validateScore, validateSameTeam, validateDuplicateMatch } from '@/utils/validation';
 
@@ -47,7 +48,13 @@ export interface UseTournamentReturn {
   isLoaded: boolean;
 }
 
-export function useTournament(): UseTournamentReturn {
+interface UseTournamentOptions {
+  isAdmin?: boolean;
+  adminPin?: string;
+}
+
+export function useTournament(options: UseTournamentOptions = {}): UseTournamentReturn {
+  const { isAdmin = false, adminPin = '' } = options;
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playerNamesByTeam, setPlayerNamesByTeam] = useState<Record<string, string[]>>({});
@@ -79,6 +86,8 @@ export function useTournament(): UseTournamentReturn {
 
   // On mount: load from localStorage or initialize defaults
   useEffect(() => {
+    let cancelled = false;
+
     const stored = StorageUtil.load();
     if (stored) {
       setTeams(stored.teams);
@@ -99,14 +108,30 @@ export function useTournament(): UseTournamentReturn {
       });
     }
     setIsLoaded(true);
+
+    RemoteStorage.load().then((remote) => {
+      if (cancelled || !remote.state) return;
+
+      setTeams(remote.state.teams);
+      setMatches(mergeWithGeneratedMatches(remote.state.matches, remote.state.teams));
+      setPlayerNamesByTeam(buildRoster(remote.state.teams, remote.state.playerNamesByTeam));
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Auto-save to localStorage whenever matches change (after initial load)
   useEffect(() => {
     if (isLoaded && teams.length > 0) {
-      StorageUtil.save({ version: 1, teams, matches, playerNamesByTeam });
+      const state = { version: 1, teams, matches, playerNamesByTeam };
+      StorageUtil.save(state);
+      if (isAdmin && adminPin) {
+        RemoteStorage.save(state, adminPin);
+      }
     }
-  }, [matches, teams, playerNamesByTeam, isLoaded]);
+  }, [matches, teams, playerNamesByTeam, isLoaded, isAdmin, adminPin]);
 
   const validateMatchData = useCallback(
     (data: MatchFormData, excludeMatchId?: string, match?: Match): SubmitResult => {
