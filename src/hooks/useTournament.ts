@@ -75,11 +75,24 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       const stored = storedById.get(generated.id);
       if (!stored) return generated;
 
+      const isGeneratedKnockout = generated.stage !== undefined && generated.stage !== 'group';
+      const isStoredSameStage =
+        isGeneratedKnockout
+          ? stored.group === 'KO' && stored.stage === generated.stage
+          : stored.group !== 'KO' && (stored.stage === undefined || stored.stage === 'group');
+
+      if (!isStoredSameStage) {
+        return generated;
+      }
+
       return {
         ...generated,
         ...stored,
-        stage: stored.stage ?? generated.stage ?? 'group',
-        title: stored.title ?? generated.title,
+        group: generated.group,
+        stage: generated.stage,
+        title: generated.title,
+        teamHomeId: isGeneratedKnockout ? generated.teamHomeId : stored.teamHomeId,
+        teamAwayId: isGeneratedKnockout ? generated.teamAwayId : stored.teamAwayId,
       };
     });
   }

@@ -55,6 +55,39 @@ describe('useTournament hook', () => {
       expect(stored.matches[0].scoreAway).toBe(2);
       expect(stored.matches[0].status).toBe('selesai');
     });
+
+    it('should clean corrupted knockout stage data from group match slots', () => {
+      const generatedMatches = generateMatchSlots(TEAMS);
+      const corruptedState = {
+        version: 1,
+        teams: TEAMS,
+        matches: generatedMatches.map((match) =>
+          match.id === 'match-07'
+            ? {
+                ...match,
+                group: 'KO' as const,
+                stage: 'semifinal' as const,
+                title: 'Semifinal 1: Juara Grup A vs Runner Up Grup B',
+                teamHomeId: 'team-a1',
+                teamAwayId: 'team-b2',
+              }
+            : match
+        ),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(corruptedState));
+
+      const { result } = renderHook(() => useTournament());
+
+      const restoredGroupMatch = result.current.matches.find((match) => match.id === 'match-07');
+      const semifinalMatches = result.current.matches.filter(
+        (match) => match.stage === 'semifinal'
+      );
+
+      expect(restoredGroupMatch?.group).toBe('B');
+      expect(restoredGroupMatch?.stage).toBeUndefined();
+      expect(restoredGroupMatch?.title).toBeUndefined();
+      expect(semifinalMatches.map((match) => match.id)).toEqual(['match-13', 'match-14']);
+    });
   });
 
   describe('submitMatch', () => {
