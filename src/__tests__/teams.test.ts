@@ -150,6 +150,7 @@ describe('generateMatchSlots', () => {
     const dateGroups = new Map<string, Set<string>>();
 
     for (const match of matches) {
+      if (match.group === 'KO') continue;
       if (!match.matchDate) continue;
 
       const key = `${match.group}-${match.matchDate.slice(0, 10)}`;

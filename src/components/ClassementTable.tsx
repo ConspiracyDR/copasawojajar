@@ -10,11 +10,16 @@ interface ClassementTableProps {
 export default function ClassementTable({ group, standings }: ClassementTableProps) {
   return (
     <div className="mb-6">
-      <h3 className="text-lg font-bold mb-2">Grup {group}</h3>
-      <div className="overflow-x-auto">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <h3 className="text-lg font-bold">Grup {group}</h3>
+        <p className="text-xs font-medium text-brand-700">
+          Peringkat 1 dan 2 lolos ke fase gugur
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-brand-100 bg-white shadow-sm shadow-brand-900/5">
         <table className="w-full text-sm md:text-base border-collapse">
           <thead>
-            <tr className="bg-gray-100 font-semibold">
+            <tr className="bg-brand-700 font-semibold text-white">
               <th className="px-2 py-1 md:px-3 md:py-2 text-left">#</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-left">Tim</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-right">M</th>
@@ -32,7 +37,7 @@ export default function ClassementTable({ group, standings }: ClassementTablePro
               <tr
                 key={row.team.id}
                 className={`border-b border-gray-200 ${
-                  row.rank <= 2 ? 'bg-green-50' : ''
+                  row.rank <= 2 ? 'bg-brand-50' : ''
                 }`}
               >
                 <td className="px-2 py-1 md:px-3 md:py-2 text-left">{row.rank}</td>

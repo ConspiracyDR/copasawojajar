@@ -22,9 +22,23 @@ export default function Jadwal({
   onDelete,
 }: JadwalProps) {
   const [groupFilter, setGroupFilter] = useState<'all' | 'A' | 'B' | 'KO'>('all');
+  const isKnockoutMatch = (match: Match) => {
+    const title = match.title?.toLowerCase() ?? '';
+    const hasKnockoutTitle =
+      title.includes('semifinal') || title.includes('juara 3') || title === 'final';
+
+    return (
+      hasKnockoutTitle &&
+      (match.stage === 'semifinal' || match.stage === 'third-place' || match.stage === 'final')
+    );
+  };
 
   const filteredMatches = matches
-    .filter((match) => (groupFilter === 'all' ? true : match.group === groupFilter))
+    .filter((match) => {
+      if (groupFilter === 'all') return true;
+      if (groupFilter === 'KO') return isKnockoutMatch(match);
+      return match.group === groupFilter && !isKnockoutMatch(match);
+    })
     .sort((a, b) => a.matchOrder - b.matchOrder);
 
   const filters: { label: string; value: 'all' | 'A' | 'B' | 'KO' }[] = [
@@ -38,15 +52,15 @@ export default function Jadwal({
     <section>
       <h2 className="text-xl font-bold mb-4">Jadwal & Hasil</h2>
 
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {filters.map((filter) => (
           <button
             key={filter.value}
             onClick={() => setGroupFilter(filter.value)}
-            className={`min-h-[44px] px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`min-h-[44px] shrink-0 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
               groupFilter === filter.value
-                ? 'bg-blue-600 text-white'
-                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                ? 'bg-brand-700 text-white shadow-sm shadow-brand-700/20'
+                : 'border border-brand-200 bg-white text-brand-800 hover:bg-brand-50'
             }`}
           >
             {filter.label}

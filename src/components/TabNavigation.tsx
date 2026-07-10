@@ -78,7 +78,7 @@ export default function TabNavigation({
     <nav
       role="tablist"
       aria-label="Navigasi utama"
-      className="fixed bottom-0 left-0 right-0 z-50 flex flex-row border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:static md:border-t-0 md:border-b md:border-gray-200 md:shadow-none"
+      className="fixed bottom-0 left-0 right-0 z-50 flex flex-row border-t border-brand-100 bg-white shadow-[0_-2px_14px_rgba(20,42,71,0.12)] md:static md:border-t-0 md:border-b md:border-brand-100 md:shadow-none"
     >
       {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -89,10 +89,10 @@ export default function TabNavigation({
             aria-selected={isActive}
             aria-controls={`tabpanel-${tab.id}`}
             onClick={() => onTabChange(tab.id)}
-            className={`flex-1 flex flex-col items-center justify-center min-h-[44px] py-2 px-1 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            className={`flex-1 flex flex-col items-center justify-center min-h-[44px] py-2 px-1 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               isActive
-                ? 'text-blue-600 font-bold border-t-2 border-blue-600 md:border-t-0 md:border-b-2'
-                : 'text-gray-500 border-t-2 border-transparent md:border-t-0 md:border-b-2'
+                ? 'text-brand-700 font-bold border-t-2 border-brand-700 md:border-t-0 md:border-b-2'
+                : 'text-gray-500 border-t-2 border-transparent md:border-t-0 md:border-b-2 hover:text-brand-700'
             }`}
           >
             {tab.icon}

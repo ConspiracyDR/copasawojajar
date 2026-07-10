@@ -151,13 +151,14 @@ export function generateMatchSlots(teams: Team[]): Match[] {
     }
   }
 
-  const knockoutMatches: Array<Pick<Match, 'id' | 'group' | 'stage' | 'title' | 'matchOrder'>> = [
+  const knockoutMatches: Array<Pick<Match, 'id' | 'group' | 'stage' | 'title' | 'matchOrder' | 'matchDate'>> = [
     {
       id: 'match-13',
       group: 'KO',
       stage: 'semifinal',
       title: 'Semifinal 1: Juara Grup A vs Runner Up Grup B',
       matchOrder: order++,
+      matchDate: '2026-08-16T09:00:00+07:00',
     },
     {
       id: 'match-14',
@@ -165,6 +166,7 @@ export function generateMatchSlots(teams: Team[]): Match[] {
       stage: 'semifinal',
       title: 'Semifinal 2: Juara Grup B vs Runner Up Grup A',
       matchOrder: order++,
+      matchDate: '2026-08-16T09:40:00+07:00',
     },
     {
       id: 'match-15',
@@ -172,6 +174,7 @@ export function generateMatchSlots(teams: Team[]): Match[] {
       stage: 'third-place',
       title: 'Perebutan Juara 3',
       matchOrder: order++,
+      matchDate: '2026-08-16T16:00:00+07:00',
     },
     {
       id: 'match-16',
@@ -179,6 +182,7 @@ export function generateMatchSlots(teams: Team[]): Match[] {
       stage: 'final',
       title: 'Final',
       matchOrder: order++,
+      matchDate: '2026-08-16T16:40:00+07:00',
     },
   ];
 
@@ -191,7 +195,6 @@ export function generateMatchSlots(teams: Team[]): Match[] {
       scoreAway: 0,
       status: 'upcoming',
       scorers: [],
-      matchDate: null,
       createdAt: now,
       updatedAt: now,
     });

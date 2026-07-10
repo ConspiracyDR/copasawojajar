@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useCallback, useEffect, FormEvent } from 'react';
 import { TabId, MatchFormData, MatchStatus, Scorer } from '@/types/tournament';
 import { useTournament } from '@/hooks/useTournament';
@@ -227,14 +228,25 @@ export default function Home() {
 
       <main className="min-h-screen pb-20 md:pb-4">
         <div className="max-w-4xl mx-auto p-4">
-          <h1 className="text-2xl font-bold text-center mb-4">Copa Sawo Jajar</h1>
+          <div className="mb-5 flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="Copa Sawo Jajar"
+              width={3780}
+              height={908}
+              className="h-auto w-80 max-w-full object-contain sm:w-96"
+              priority
+              quality={100}
+              unoptimized
+            />
+          </div>
 
           <div className="mb-4 flex items-center justify-center">
             {isAdmin ? (
               <button
                 type="button"
                 onClick={handleAdminLogout}
-                className="min-h-[40px] rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                className="min-h-[40px] rounded-md border border-brand-200 bg-white px-3 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-50"
               >
                 Keluar Admin
               </button>
@@ -245,17 +257,17 @@ export default function Home() {
                   value={pendingPin}
                   onChange={(e) => setPendingPin(e.target.value)}
                   placeholder="PIN admin"
-                  className="min-w-0 flex-1 rounded border border-gray-300 p-2 text-[16px]"
+                  className="min-w-0 flex-1 rounded border border-brand-200 bg-white p-2 text-[16px] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
                 <button
                   type="submit"
-                  className="min-h-[44px] rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="min-h-[44px] rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
                 >
                   Masuk
                 </button>
               </form>
             ) : (
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-100">
                 View-only
               </span>
             )}

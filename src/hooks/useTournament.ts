@@ -93,6 +93,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         title: generated.title,
         teamHomeId: isGeneratedKnockout ? generated.teamHomeId : stored.teamHomeId,
         teamAwayId: isGeneratedKnockout ? generated.teamAwayId : stored.teamAwayId,
+        matchDate: isGeneratedKnockout ? generated.matchDate : stored.matchDate,
       };
     });
   }

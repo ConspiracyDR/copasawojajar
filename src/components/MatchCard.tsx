@@ -36,6 +36,7 @@ export default function MatchCard({
   const homeTeamName = homeTeam?.name ?? 'TBD';
   const awayTeamName = awayTeam?.name ?? 'TBD';
   const canInputResult = Boolean(homeTeam && awayTeam);
+  const displayDate = match.matchDate ?? getKnockoutFallbackDate(match);
 
   function handleEditOpen() {
     // Reset to current match values
@@ -71,7 +72,7 @@ export default function MatchCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 shadow-sm transition-shadow hover:shadow-md">
+    <div className="overflow-hidden rounded-lg border border-brand-100 bg-white shadow-sm shadow-brand-900/5 transition-shadow hover:shadow-md hover:shadow-brand-900/10">
 
       {/* Card header */}
       <div className="p-4">
@@ -79,8 +80,8 @@ export default function MatchCard({
         <div className="mb-3 flex items-center justify-between">
           <StatusBadge status={match.status} />
           <span className="text-xs text-gray-500">
-            {match.matchDate
-              ? new Date(match.matchDate).toLocaleDateString('id-ID', {
+            {displayDate
+              ? new Date(displayDate).toLocaleDateString('id-ID', {
                   weekday: 'short', day: 'numeric', month: 'short',
                   hour: '2-digit', minute: '2-digit',
                 })
@@ -98,9 +99,9 @@ export default function MatchCard({
         <div className="flex items-center justify-between gap-2">
           <span className="flex-1 text-sm font-medium text-gray-900 text-left">{homeTeamName}</span>
           {match.status === 'upcoming' ? (
-            <span className="shrink-0 px-3 py-1 text-sm font-semibold text-gray-400">vs</span>
+            <span className="shrink-0 px-3 py-1 text-sm font-semibold text-brand-300">vs</span>
           ) : (
-            <span className="shrink-0 px-3 py-1 text-lg font-bold text-gray-900">
+            <span className="shrink-0 px-3 py-1 text-lg font-bold text-brand-900">
               {match.scoreHome} - {match.scoreAway}
             </span>
           )}
@@ -266,10 +267,28 @@ export default function MatchCard({
   );
 }
 
+function getKnockoutFallbackDate(match: Match): string | null {
+  const title = match.title?.toLowerCase() ?? '';
+
+  if (match.stage === 'semifinal') {
+    return title.includes('2') ? '2026-08-16T09:40:00+07:00' : '2026-08-16T09:00:00+07:00';
+  }
+
+  if (match.stage === 'third-place' || title.includes('juara 3')) {
+    return '2026-08-16T16:00:00+07:00';
+  }
+
+  if (match.stage === 'final') {
+    return '2026-08-16T16:40:00+07:00';
+  }
+
+  return null;
+}
+
 function StatusBadge({ status }: { status: Match['status'] }) {
   switch (status) {
     case 'upcoming':
-      return <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Upcoming</span>;
+      return <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">Upcoming</span>;
     case 'live':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
@@ -278,7 +297,7 @@ function StatusBadge({ status }: { status: Match['status'] }) {
         </span>
       );
     case 'selesai':
-      return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">Selesai</span>;
+      return <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800">Selesai</span>;
     default:
       return null;
   }
