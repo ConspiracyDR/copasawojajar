@@ -15,11 +15,20 @@ import OfflineIndicator from '@/components/OfflineIndicator';
 import DataManagement from '@/components/DataManagement';
 import AdminPanel from '@/components/AdminPanel';
 
+type BeforeInstallPromptOutcome = 'accepted' | 'dismissed';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: BeforeInstallPromptOutcome; platform: string }>;
+}
+
 export default function Home() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [pendingPin, setPendingPin] = useState('');
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   const {
     teams,
@@ -54,12 +63,38 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const shouldShowAdminLogin = params.get('admin') === '1';
     const savedPin = window.sessionStorage.getItem('copa-admin-pin') ?? '';
+    const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
 
     setShowAdminLogin(shouldShowAdminLogin);
+    setIsStandalone(
+      window.matchMedia('(display-mode: standalone)').matches ||
+        navigatorWithStandalone.standalone === true
+    );
     if (savedPin) {
       setIsAdmin(true);
       setAdminPin(savedPin);
     }
+  }, []);
+
+  useEffect(() => {
+    function handleBeforeInstallPrompt(event: Event) {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    }
+
+    function handleAppInstalled() {
+      setInstallPrompt(null);
+      setIsStandalone(true);
+      setToast({ message: 'Aplikasi berhasil diinstall', type: 'success' });
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,6 +121,21 @@ export default function Home() {
     setAdminPin('');
     setActiveTab('klasemen');
     setToast({ message: 'Mode view-only aktif', type: 'success' });
+  }
+
+  async function handleInstallClick() {
+    if (!installPrompt) {
+      setToast({ message: 'Install belum tersedia di browser ini', type: 'error' });
+      return;
+    }
+
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallPrompt(null);
+
+    if (choice.outcome === 'accepted') {
+      setToast({ message: 'Proses install dimulai', type: 'success' });
+    }
   }
 
   // Direct submit from Jadwal MatchCard inline form
@@ -364,6 +414,18 @@ export default function Home() {
               onImport={handleImportRequest}
               onReset={handleResetRequest}
             />
+          )}
+
+          {!isStandalone && installPrompt && (
+            <footer className="mt-8 flex justify-center pb-4">
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                className="min-h-[44px] rounded-full bg-brand-800 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-brand-900/20 transition-colors hover:bg-brand-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+              >
+                Install Copa Sawo Jajar 03
+              </button>
+            </footer>
           )}
         </div>
 

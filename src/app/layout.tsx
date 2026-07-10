@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Copa Sawo Jajar",
+  title: "Copa Sawo Jajar 03",
   description: "Tournament Management PWA",
   manifest: "/manifest.json",
 };
