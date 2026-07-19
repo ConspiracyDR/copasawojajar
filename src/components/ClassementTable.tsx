@@ -26,8 +26,6 @@ export default function ClassementTable({ group, standings }: ClassementTablePro
               <th className="px-2 py-1 md:px-3 md:py-2 text-right">W</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-right">D</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-right">L</th>
-              <th className="px-2 py-1 md:px-3 md:py-2 text-right">GF</th>
-              <th className="px-2 py-1 md:px-3 md:py-2 text-right">GA</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-right">GD</th>
               <th className="px-2 py-1 md:px-3 md:py-2 text-right font-bold">Pts</th>
             </tr>
@@ -48,8 +46,6 @@ export default function ClassementTable({ group, standings }: ClassementTablePro
                 <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.wins}</td>
                 <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.draws}</td>
                 <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.losses}</td>
-                <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.goalsFor}</td>
-                <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.goalsAgainst}</td>
                 <td className="px-2 py-1 md:px-3 md:py-2 text-right">{row.goalDifference}</td>
                 <td className="px-2 py-1 md:px-3 md:py-2 text-right font-bold">
                   {row.points}
