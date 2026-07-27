@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Team,
   Match,
@@ -59,6 +59,8 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
   const [matches, setMatches] = useState<Match[]>([]);
   const [playerNamesByTeam, setPlayerNamesByTeam] = useState<Record<string, string[]>>({});
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isRemoteLoaded, setIsRemoteLoaded] = useState(false);
+  const hasLocalChangesRef = useRef(false);
 
   function buildRoster(nextTeams: Team[], roster?: Record<string, string[]>): Record<string, string[]> {
     return nextTeams.reduce<Record<string, string[]>>((acc, team) => {
@@ -98,42 +100,56 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
     });
   }
 
-  // On mount: load from localStorage or initialize defaults
+  function applyTournamentState(state: TournamentState) {
+    setTeams(state.teams);
+    setMatches(mergeWithGeneratedMatches(state.matches, state.teams));
+    setPlayerNamesByTeam(buildRoster(state.teams, state.playerNamesByTeam));
+  }
+
+  function getInitialState(): TournamentState {
+    const stored = StorageUtil.load();
+    if (stored) return stored;
+
+    const initialTeams = TEAMS;
+    const initialMatches = generateMatchSlots(initialTeams);
+    const initialPlayerNamesByTeam = buildRoster(initialTeams, PLAYER_NAMES_BY_TEAM);
+    const initialState = {
+      version: 1,
+      teams: initialTeams,
+      matches: initialMatches,
+      playerNamesByTeam: initialPlayerNamesByTeam,
+    };
+
+    StorageUtil.save(initialState);
+    return initialState;
+  }
+
+  function markLocalChange() {
+    hasLocalChangesRef.current = true;
+  }
+
+  // On mount: load local/default immediately, then apply remote only if nothing changed yet.
   useEffect(() => {
     let cancelled = false;
 
-    const stored = StorageUtil.load();
-    if (stored) {
-      setTeams(stored.teams);
-      setMatches(mergeWithGeneratedMatches(stored.matches, stored.teams));
-      setPlayerNamesByTeam(buildRoster(stored.teams, stored.playerNamesByTeam));
-    } else {
-      const initialTeams = TEAMS;
-      const initialMatches = generateMatchSlots(initialTeams);
-      const initialPlayerNamesByTeam = buildRoster(initialTeams, PLAYER_NAMES_BY_TEAM);
-      setTeams(initialTeams);
-      setMatches(initialMatches);
-      setPlayerNamesByTeam(initialPlayerNamesByTeam);
-      StorageUtil.save({
-        version: 1,
-        teams: initialTeams,
-        matches: initialMatches,
-        playerNamesByTeam: initialPlayerNamesByTeam,
-      });
-    }
+    const initialState = getInitialState();
+    applyTournamentState(initialState);
     setIsLoaded(true);
 
     RemoteStorage.load().then((remote) => {
-      if (cancelled || !remote.state) return;
+      if (cancelled) return;
 
-      setTeams(remote.state.teams);
-      setMatches(mergeWithGeneratedMatches(remote.state.matches, remote.state.teams));
-      setPlayerNamesByTeam(buildRoster(remote.state.teams, remote.state.playerNamesByTeam));
+      if (remote.state && !hasLocalChangesRef.current) {
+        applyTournamentState(remote.state);
+      }
+      setIsRemoteLoaded(true);
     });
 
     return () => {
       cancelled = true;
     };
+    // Remote bootstrap must run once on mount; later edits are guarded by hasLocalChangesRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save to localStorage whenever matches change (after initial load)
@@ -141,11 +157,11 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
     if (isLoaded && teams.length > 0) {
       const state = { version: 1, teams, matches, playerNamesByTeam };
       StorageUtil.save(state);
-      if (isAdmin && adminPin) {
+      if (isAdmin && adminPin && isRemoteLoaded) {
         RemoteStorage.save(state, adminPin);
       }
     }
-  }, [matches, teams, playerNamesByTeam, isLoaded, isAdmin, adminPin]);
+  }, [matches, teams, playerNamesByTeam, isLoaded, isAdmin, adminPin, isRemoteLoaded]);
 
   const validateMatchData = useCallback(
     (data: MatchFormData, excludeMatchId?: string, match?: Match): SubmitResult => {
@@ -224,6 +240,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
       return { success: true };
     },
@@ -259,6 +276,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
       return { success: true };
     },
@@ -281,6 +299,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
     },
     [matches]
@@ -371,6 +390,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
     },
     [matches]
@@ -392,6 +412,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
     },
     [matches]
@@ -411,6 +432,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       // Read the file again to get the data and replace state
       const text = await file.text();
       const parsed = JSON.parse(text) as TournamentState;
+      markLocalChange();
       setTeams(parsed.teams);
       setMatches(mergeWithGeneratedMatches(parsed.matches, parsed.teams));
       setPlayerNamesByTeam(buildRoster(parsed.teams, parsed.playerNamesByTeam));
@@ -431,6 +453,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       updatedAt: now,
     }));
 
+    markLocalChange();
     setMatches(resetMatches);
   }, [matches]);
 
@@ -440,6 +463,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
     (name: string, group: Group): void => {
       const id = `team-${group.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const newTeam: Team = { id, name, group };
+      markLocalChange();
       setTeams((prev) => {
         const updated = [...prev, newTeam];
         return updated;
@@ -451,6 +475,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
 
   const editTeam = useCallback(
     (teamId: string, newName: string): void => {
+      markLocalChange();
       setTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, name: newName } : t)));
     },
     []
@@ -458,6 +483,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
 
   const removeTeam = useCallback(
     (teamId: string): void => {
+      markLocalChange();
       setTeams((prev) => prev.filter((t) => t.id !== teamId));
       setPlayerNamesByTeam((prev) => {
         const next = { ...prev };
@@ -470,6 +496,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
 
   const regenerateMatches = useCallback((): void => {
     const newMatches = generateMatchSlots(teams);
+    markLocalChange();
     setMatches(newMatches);
   }, [teams]);
 
@@ -485,6 +512,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       return { success: false, error: 'Nama pemain sudah ada di tim ini' };
     }
 
+    markLocalChange();
     setPlayerNamesByTeam((prev) => ({
       ...prev,
       [teamId]: [...(prev[teamId] ?? []), name],
@@ -510,6 +538,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         return { success: false, error: 'Nama pemain sudah ada di tim ini' };
       }
 
+      markLocalChange();
       setPlayerNamesByTeam((prev) => ({
         ...prev,
         [teamId]: (prev[teamId] ?? []).map((existing, index) =>
@@ -522,6 +551,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
   );
 
   const removePlayer = useCallback((teamId: string, playerIndex: number): void => {
+    markLocalChange();
     setPlayerNamesByTeam((prev) => ({
       ...prev,
       [teamId]: (prev[teamId] ?? []).filter((_, index) => index !== playerIndex),
@@ -543,6 +573,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         updatedAt: now,
       };
 
+      markLocalChange();
       setMatches(updatedMatches);
     },
     [matches]
