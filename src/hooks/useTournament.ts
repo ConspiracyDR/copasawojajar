@@ -69,18 +69,37 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
     }, {});
   }
 
+  function isKnockoutMatch(match: Match): boolean {
+    return match.group === 'KO' && match.stage !== undefined && match.stage !== 'group';
+  }
+
+  function getKnockoutKey(match: Pick<Match, 'stage' | 'title'>): string {
+    return `${match.stage ?? 'group'}:${match.title ?? ''}`.toLowerCase();
+  }
+
   function mergeWithGeneratedMatches(storedMatches: Match[], nextTeams: Team[]): Match[] {
     const generatedMatches = generateMatchSlots(nextTeams);
-    const storedById = new Map(storedMatches.map((match) => [match.id, match]));
+    const storedGroupById = new Map(
+      storedMatches
+        .filter((match) => !isKnockoutMatch(match))
+        .map((match) => [match.id, match])
+    );
+    const storedKnockoutByKey = new Map(
+      storedMatches
+        .filter(isKnockoutMatch)
+        .map((match) => [getKnockoutKey(match), match])
+    );
 
     return generatedMatches.map((generated) => {
-      const stored = storedById.get(generated.id);
+      const isGeneratedKnockout = isKnockoutMatch(generated);
+      const stored = isGeneratedKnockout
+        ? storedKnockoutByKey.get(getKnockoutKey(generated))
+        : storedGroupById.get(generated.id);
       if (!stored) return generated;
 
-      const isGeneratedKnockout = generated.stage !== undefined && generated.stage !== 'group';
       const isStoredSameStage =
         isGeneratedKnockout
-          ? stored.group === 'KO' && stored.stage === generated.stage
+          ? isKnockoutMatch(stored) && getKnockoutKey(stored) === getKnockoutKey(generated)
           : stored.group !== 'KO' && (stored.stage === undefined || stored.stage === 'group');
 
       if (!isStoredSameStage) {
@@ -96,6 +115,7 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
         teamHomeId: isGeneratedKnockout ? generated.teamHomeId : stored.teamHomeId,
         teamAwayId: isGeneratedKnockout ? generated.teamAwayId : stored.teamAwayId,
         matchDate: isGeneratedKnockout ? generated.matchDate : stored.matchDate,
+        matchOrder: generated.matchOrder,
       };
     });
   }
@@ -314,7 +334,18 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
 
   const displayMatches = (() => {
     const resolvedMatches = matches.map((match) => ({ ...match }));
-    const byId = new Map(resolvedMatches.map((match) => [match.id, match]));
+    const knockoutMatches = resolvedMatches
+      .filter(isKnockoutMatch)
+      .sort((a, b) => a.matchOrder - b.matchOrder);
+    const semifinalMatches = knockoutMatches.filter((match) => match.stage === 'semifinal');
+    const semifinal1 =
+      semifinalMatches.find((match) => match.title?.toLowerCase().includes('semifinal 1')) ??
+      semifinalMatches[0];
+    const semifinal2 =
+      semifinalMatches.find((match) => match.title?.toLowerCase().includes('semifinal 2')) ??
+      semifinalMatches[1];
+    const thirdPlace = knockoutMatches.find((match) => match.stage === 'third-place');
+    const finalMatch = knockoutMatches.find((match) => match.stage === 'final');
     const groupMatches = resolvedMatches.filter(
       (match) => match.stage === undefined || match.stage === 'group'
     );
@@ -328,8 +359,6 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
     if (groupAComplete && groupBComplete) {
       const standingsA = calculateStandings(resolvedMatches, teams, 'A');
       const standingsB = calculateStandings(resolvedMatches, teams, 'B');
-      const semifinal1 = byId.get('match-13');
-      const semifinal2 = byId.get('match-14');
 
       if (semifinal1 && standingsA[0] && standingsB[1]) {
         semifinal1.teamHomeId = standingsA[0].team.id;
@@ -352,10 +381,6 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       return match.scoreHome > match.scoreAway ? match.teamAwayId : match.teamHomeId;
     };
 
-    const semifinal1 = byId.get('match-13');
-    const semifinal2 = byId.get('match-14');
-    const thirdPlace = byId.get('match-15');
-    const finalMatch = byId.get('match-16');
     const semifinal1Winner = getWinnerId(semifinal1);
     const semifinal2Winner = getWinnerId(semifinal2);
     const semifinal1Loser = getLoserId(semifinal1);
@@ -439,6 +464,8 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
 
       return { success: true };
     },
+    // Import reads the latest file payload and then normalizes it through current helpers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 

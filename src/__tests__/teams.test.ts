@@ -60,6 +60,19 @@ describe('generateMatchSlots', () => {
     ]);
   });
 
+  it('should keep match ids unique when group sizes change', () => {
+    const matchesWithExtraTeam = generateMatchSlots([
+      ...TEAMS,
+      { id: 'team-a-extra', name: 'Tim Tambahan', group: 'A' },
+    ]);
+    const ids = matchesWithExtraTeam.map((m) => m.id);
+    const knockout = matchesWithExtraTeam.filter((m) => m.group === 'KO');
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(matchesWithExtraTeam).toHaveLength(20);
+    expect(knockout.map((m) => m.id)).toEqual(['match-17', 'match-18', 'match-19', 'match-20']);
+  });
+
   it('should assign sequential matchOrder 1-16', () => {
     const orders = matches.map((m) => m.matchOrder);
     expect(orders).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);

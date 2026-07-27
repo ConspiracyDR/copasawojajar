@@ -151,44 +151,39 @@ export function generateMatchSlots(teams: Team[]): Match[] {
     }
   }
 
-  const knockoutMatches: Array<Pick<Match, 'id' | 'group' | 'stage' | 'title' | 'matchOrder' | 'matchDate'>> = [
+  const knockoutTemplates: Array<Pick<Match, 'group' | 'stage' | 'title' | 'matchDate'>> = [
     {
-      id: 'match-13',
       group: 'KO',
       stage: 'semifinal',
       title: 'Semifinal 1: Juara Grup A vs Runner Up Grup B',
-      matchOrder: order++,
       matchDate: '2026-08-16T09:00:00+07:00',
     },
     {
-      id: 'match-14',
       group: 'KO',
       stage: 'semifinal',
       title: 'Semifinal 2: Juara Grup B vs Runner Up Grup A',
-      matchOrder: order++,
       matchDate: '2026-08-16T09:40:00+07:00',
     },
     {
-      id: 'match-15',
       group: 'KO',
       stage: 'third-place',
       title: 'Perebutan Juara 3',
-      matchOrder: order++,
       matchDate: '2026-08-16T16:00:00+07:00',
     },
     {
-      id: 'match-16',
       group: 'KO',
       stage: 'final',
       title: 'Final',
-      matchOrder: order++,
       matchDate: '2026-08-16T16:40:00+07:00',
     },
   ];
 
-  knockoutMatches.forEach((match) => {
+  knockoutTemplates.forEach((match) => {
+    const matchOrder = order++;
     matches.push({
       ...match,
+      id: `match-${String(matchOrder).padStart(2, '0')}`,
+      matchOrder,
       teamHomeId: '',
       teamAwayId: '',
       scoreHome: 0,
