@@ -39,7 +39,11 @@ export default function Jadwal({
       if (groupFilter === 'KO') return isKnockoutMatch(match);
       return match.group === groupFilter && !isKnockoutMatch(match);
     })
-    .sort((a, b) => a.matchOrder - b.matchOrder);
+    .sort((a, b) => {
+      const aTime = a.matchDate ? new Date(a.matchDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const bTime = b.matchDate ? new Date(b.matchDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return aTime - bTime || a.matchOrder - b.matchOrder;
+    });
 
   const filters: { label: string; value: 'all' | 'A' | 'B' | 'KO' }[] = [
     { label: 'Semua', value: 'all' },

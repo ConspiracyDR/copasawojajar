@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useTournament } from '@/hooks/useTournament';
+import { mergeWithGeneratedMatches, useTournament } from '@/hooks/useTournament';
 import { TEAMS, generateMatchSlots } from '@/data/teams';
 import { StorageUtil, STORAGE_KEY } from '@/utils/storage';
 import { MatchFormData, Scorer } from '@/types/tournament';
@@ -87,6 +87,32 @@ describe('useTournament hook', () => {
       expect(restoredGroupMatch?.stage).toBeUndefined();
       expect(restoredGroupMatch?.title).toBeUndefined();
       expect(semifinalMatches.map((match) => match.id)).toEqual(['match-13', 'match-14']);
+    });
+
+    it('should keep Group B pairings unique after Group A gets an extra team', () => {
+      const teamsWithExtraA = [
+        ...TEAMS,
+        { id: 'team-a-extra', name: 'Tim Tambahan', group: 'A' as const },
+      ];
+      const oldMatches = generateMatchSlots(TEAMS).map((match) =>
+        match.group === 'B' && match.id === 'match-07'
+          ? { ...match, scoreHome: 2, scoreAway: 1, status: 'selesai' as const }
+          : match
+      );
+      const normalized = mergeWithGeneratedMatches(oldMatches, teamsWithExtraA);
+      const groupB = normalized.filter((match) => match.group === 'B');
+      const pairingKeys = groupB.map((match) =>
+        [match.teamHomeId, match.teamAwayId].sort().join(':')
+      );
+      const carriedResult = groupB.find(
+        (match) =>
+          [match.teamHomeId, match.teamAwayId].includes('team-b1') &&
+          [match.teamHomeId, match.teamAwayId].includes('team-b4')
+      );
+
+      expect(new Set(pairingKeys).size).toBe(groupB.length);
+      expect(carriedResult).toMatchObject({ scoreHome: 2, scoreAway: 1, status: 'selesai' });
+      expect(new Set(normalized.map((match) => match.id)).size).toBe(normalized.length);
     });
   });
 

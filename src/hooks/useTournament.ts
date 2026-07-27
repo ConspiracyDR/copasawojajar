@@ -53,6 +53,66 @@ interface UseTournamentOptions {
   adminPin?: string;
 }
 
+function isKnockoutMatch(match: Match): boolean {
+  return match.group === 'KO';
+}
+
+function getKnockoutKey(match: Pick<Match, 'stage' | 'title'>): string {
+  return `${match.stage ?? 'group'}:${match.title ?? ''}`.toLowerCase();
+}
+
+function getGroupPairingKey(match: Pick<Match, 'group' | 'teamHomeId' | 'teamAwayId'>): string {
+  return [match.teamHomeId, match.teamAwayId].sort().join(':') + `:${match.group}`;
+}
+
+function isNewerMatch(candidate: Match, current: Match | undefined): boolean {
+  if (!current) return true;
+  return new Date(candidate.updatedAt).getTime() >= new Date(current.updatedAt).getTime();
+}
+
+// Normalizes older saved schedules. Match numbers can change after teams are added,
+// while a team pairing remains the stable identity for a group-stage match.
+export function mergeWithGeneratedMatches(storedMatches: Match[], nextTeams: Team[]): Match[] {
+  const generatedMatches = generateMatchSlots(nextTeams);
+  const storedGroupByPairing = new Map<string, Match>();
+  const storedKnockoutByKey = new Map<string, Match>();
+
+  storedMatches.forEach((match) => {
+    if (isKnockoutMatch(match)) {
+      const key = getKnockoutKey(match);
+      const current = storedKnockoutByKey.get(key);
+      if (isNewerMatch(match, current)) storedKnockoutByKey.set(key, match);
+      return;
+    }
+
+    if (match.group !== 'A' && match.group !== 'B') return;
+    const key = getGroupPairingKey(match);
+    const current = storedGroupByPairing.get(key);
+    if (isNewerMatch(match, current)) storedGroupByPairing.set(key, match);
+  });
+
+  return generatedMatches.map((generated) => {
+    const generatedIsKnockout = isKnockoutMatch(generated);
+    const stored = generatedIsKnockout
+      ? storedKnockoutByKey.get(getKnockoutKey(generated))
+      : storedGroupByPairing.get(getGroupPairingKey(generated));
+    if (!stored) return generated;
+
+    return {
+      ...generated,
+      ...stored,
+      id: generated.id,
+      group: generated.group,
+      stage: generated.stage,
+      title: generated.title,
+      teamHomeId: generatedIsKnockout ? generated.teamHomeId : stored.teamHomeId,
+      teamAwayId: generatedIsKnockout ? generated.teamAwayId : stored.teamAwayId,
+      matchDate: generatedIsKnockout ? generated.matchDate : stored.matchDate,
+      matchOrder: generated.matchOrder,
+    };
+  });
+}
+
 export function useTournament(options: UseTournamentOptions = {}): UseTournamentReturn {
   const { isAdmin = false, adminPin = '' } = options;
   const [teams, setTeams] = useState<Team[]>([]);
@@ -67,57 +127,6 @@ export function useTournament(options: UseTournamentOptions = {}): UseTournament
       acc[team.id] = roster?.[team.id] ?? PLAYER_NAMES_BY_TEAM[team.id] ?? [];
       return acc;
     }, {});
-  }
-
-  function isKnockoutMatch(match: Match): boolean {
-    return match.group === 'KO' && match.stage !== undefined && match.stage !== 'group';
-  }
-
-  function getKnockoutKey(match: Pick<Match, 'stage' | 'title'>): string {
-    return `${match.stage ?? 'group'}:${match.title ?? ''}`.toLowerCase();
-  }
-
-  function mergeWithGeneratedMatches(storedMatches: Match[], nextTeams: Team[]): Match[] {
-    const generatedMatches = generateMatchSlots(nextTeams);
-    const storedGroupById = new Map(
-      storedMatches
-        .filter((match) => !isKnockoutMatch(match))
-        .map((match) => [match.id, match])
-    );
-    const storedKnockoutByKey = new Map(
-      storedMatches
-        .filter(isKnockoutMatch)
-        .map((match) => [getKnockoutKey(match), match])
-    );
-
-    return generatedMatches.map((generated) => {
-      const isGeneratedKnockout = isKnockoutMatch(generated);
-      const stored = isGeneratedKnockout
-        ? storedKnockoutByKey.get(getKnockoutKey(generated))
-        : storedGroupById.get(generated.id);
-      if (!stored) return generated;
-
-      const isStoredSameStage =
-        isGeneratedKnockout
-          ? isKnockoutMatch(stored) && getKnockoutKey(stored) === getKnockoutKey(generated)
-          : stored.group !== 'KO' && (stored.stage === undefined || stored.stage === 'group');
-
-      if (!isStoredSameStage) {
-        return generated;
-      }
-
-      return {
-        ...generated,
-        ...stored,
-        group: generated.group,
-        stage: generated.stage,
-        title: generated.title,
-        teamHomeId: isGeneratedKnockout ? generated.teamHomeId : stored.teamHomeId,
-        teamAwayId: isGeneratedKnockout ? generated.teamAwayId : stored.teamAwayId,
-        matchDate: isGeneratedKnockout ? generated.matchDate : stored.matchDate,
-        matchOrder: generated.matchOrder,
-      };
-    });
   }
 
   function applyTournamentState(state: TournamentState) {

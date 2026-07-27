@@ -243,7 +243,12 @@ export default function AdminPanel({
               Atur tanggal & jam untuk setiap pertandingan. Kosongkan jika belum ditentukan.
             </p>
             {matches
-              .sort((a, b) => a.matchOrder - b.matchOrder)
+              .slice()
+              .sort((a, b) => {
+                const aTime = a.matchDate ? new Date(a.matchDate).getTime() : Number.MAX_SAFE_INTEGER;
+                const bTime = b.matchDate ? new Date(b.matchDate).getTime() : Number.MAX_SAFE_INTEGER;
+                return aTime - bTime || a.matchOrder - b.matchOrder;
+              })
               .map((match) => (
                 <div
                   key={match.id}
